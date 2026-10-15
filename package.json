@@ -1,0 +1,33 @@
+{
+  "name": "mic-invoice-importer",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.5.1",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "db:check": "node --env-file=.env.local scripts/check-db.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.922.0",
+    "@supabase/supabase-js": "^2.76.1",
+    "next": "^16.0.1",
+    "pdf-parse": "^2.4.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "server-only": "^0.0.1",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "eslint": "^9.39.0",
+    "eslint-config-next": "^16.0.1",
+    "typescript": "^5.9.3",
+    "vitest": "3.2.4"
+  }
+}
