@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MIC Invoice Importer",
-  description: "Import text-based Xero invoice PDFs",
+  title: "MIC Operations Control",
+  description: "Track invoice jobs from intake to courier collection",
 };
 
 export default function RootLayout({

@@ -3,7 +3,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   progressSteps,
-  statusIndex,
   statusLabels,
   type Job,
   type JobStatus,
@@ -57,6 +56,15 @@ export function JobBoard() {
     return () => { active = false; };
   }, [date]);
 
+  useEffect(() => {
+    const addCreatedJob = (event: Event) => {
+      const job = (event as CustomEvent<Job>).detail;
+      if (job.workDate === date) setJobs((current) => [job, ...current]);
+    };
+    window.addEventListener("mic:job-created", addCreatedJob);
+    return () => window.removeEventListener("mic:job-created", addCreatedJob);
+  }, [date]);
+
   const visibleJobs = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return jobs;
@@ -88,19 +96,36 @@ export function JobBoard() {
     }
   }
 
-  async function update(id: string, status: JobStatus, courierRequired?: boolean) {
+  async function update(id: string, status: JobStatus, courierRequired?: boolean, courierBookedDate?: string) {
     setError("");
+    const previousJobs = jobs;
+    setJobs((current) => current.map((job) => job.id === id ? {
+        ...job,
+        status,
+        courierRequired: courierRequired ?? job.courierRequired,
+        courierBookedDate: courierBookedDate ?? job.courierBookedDate,
+        completedAt: status === "completed" ? new Date().toISOString() : null,
+        updatedAt: new Date().toISOString(),
+      } : job));
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 10000);
     try {
       const response = await fetch("/api/jobs", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, status, courierRequired }),
+        body: JSON.stringify({ id, status, courierRequired, courierBookedDate }),
+        signal: controller.signal,
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? "Could not update job.");
       setJobs((current) => current.map((job) => job.id === id ? payload.job : job));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not update job.");
+      setJobs(previousJobs);
+      setError(caught instanceof Error && caught.name === "AbortError"
+        ? "Saving took too long. The progress change was cancelled; please try again."
+        : caught instanceof Error ? caught.message : "Could not update job.");
+    } finally {
+      window.clearTimeout(timeout);
     }
   }
 
@@ -175,61 +200,86 @@ export function JobBoard() {
   );
 }
 
-function JobCard({ job, update }: { job: Job; update: (id: string, status: JobStatus, courierRequired?: boolean) => void }) {
-  const current = statusIndex(job.status, job.courierRequired);
-  const details = [
-    ["Customer", job.customerName],
-    ["Suburb", job.suburb],
-    ["Source", job.source],
-    ["Job ref", job.jobNumber],
-    ["Invoice", job.invoiceNumber],
-  ].filter(([, value]) => value);
+function JobCard({ job, update }: { job: Job; update: (id: string, status: JobStatus, courierRequired?: boolean, courierBookedDate?: string) => Promise<void> }) {
+  const current = progressSteps.findIndex((step) => step.status === job.status);
+  const [selectedStatus, setSelectedStatus] = useState<JobStatus>(job.status);
+  const [bookingDate, setBookingDate] = useState(job.courierBookedDate || localDate());
+  const [saving, setSaving] = useState(false);
+  const selectedIndex = progressSteps.findIndex((step) => step.status === selectedStatus);
+
+  useEffect(() => {
+    setSelectedStatus(job.status);
+    setBookingDate(job.courierBookedDate || localDate());
+  }, [job.status, job.courierBookedDate]);
+
+  function selectStep(status: JobStatus, index: number) {
+    if (status === selectedStatus && index > 0) {
+      setSelectedStatus(progressSteps[index - 1].status);
+      return;
+    }
+    setSelectedStatus(status);
+  }
+
+  async function confirmStatus() {
+    setSaving(true);
+    try {
+      const courierRequired = selectedIndex >= 3 ? true : undefined;
+      await update(
+        job.id,
+        selectedStatus,
+        courierRequired,
+        selectedStatus === "courier_booked" || selectedStatus === "completed" ? bookingDate : undefined,
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <article className={`job-card status-${job.status}`}>
       <div className="job-main">
         <div className="job-title-row">
           <div>
-            <span className="job-ref">{job.jobNumber || job.invoiceNumber || "Unnumbered job"}</span>
+            <span className="job-ref">Invoice · {job.invoiceNumber || "No invoice number"}{job.jobNumber ? ` · Ref ${job.jobNumber}` : ""}</span>
             <h3>{job.customerName || "Customer not entered"}</h3>
-            <p>{job.suburb || "Suburb not entered"}{job.source ? ` · ${job.source}` : ""}</p>
+            <p>{job.deliveryAddress ? `${job.deliveryAddress} · ` : ""}{job.suburb || "Suburb not entered"}</p>
           </div>
           <span className={`status-pill ${job.status}`}>{statusLabels[job.status]}</span>
         </div>
-        {details.length > 0 && (
-          <dl className="job-details">{details.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
-        )}
-        {job.notes && <p className="job-notes">{job.notes}</p>}
-        <JobAction job={job} update={update} />
+        <div className="job-parts">
+          {job.lineItems.length > 0 && <div className="job-part job-part-header"><span>Name</span><span>中文名字</span><span>MIC Code</span><span>Part Number</span><span>Price</span></div>}
+          {job.lineItems.length ? job.lineItems.map((item, index) => (
+            <div className="job-part" key={`${item.partNumber}-${index}`}>
+              <span>{item.description}</span><span className={item.chineseName ? "" : "name-pending"}>{item.chineseName || "待确认"}</span><code className={item.micCode ? "" : "mic-pending"}>{item.micCode || "Manual check"}</code><code>{item.partNumber || "No part number"}</code><strong>{job.currency || ""} {item.price || "—"}</strong>
+            </div>
+          )) : <span className="no-parts">Parts need manual review</span>}
+        </div>
+        <div className="job-card-footer">
+          <span className="job-total">Total <strong>{job.currency || ""} {job.total || "—"}</strong></span>
+          {job.courierBookedDate && <span className="booked-date">Courier booked for <strong>{job.courierBookedDate}</strong></span>}
+        </div>
       </div>
       <div className="progress-panel">
-        <span className="progress-title">Progress</span>
+        <div className="progress-heading">
+          <div><span className="progress-title">Progress</span><small>Select a stage, then click Complete to save</small></div>
+          {(selectedStatus === "courier_booked" || selectedStatus === "completed") && <input aria-label="Courier booking date" type="date" value={bookingDate} onChange={(event) => setBookingDate(event.target.value)} />}
+          {selectedStatus !== job.status && <button className="cancel-progress" onClick={() => setSelectedStatus(job.status)}>Cancel</button>}
+          <button className="confirm-progress" disabled={selectedStatus === job.status || saving} onClick={confirmStatus}>{saving ? "Saving…" : "Complete"}</button>
+        </div>
         <div className="progress-track">
           {progressSteps.map((step, index) => {
             const skipped = job.courierRequired === false && (step.status === "courier_needed" || step.status === "courier_booked");
             return (
-              <div className={`progress-step ${index <= current ? "reached" : ""} ${skipped ? "skipped" : ""}`} key={step.status}>
-                <span className="progress-dot">{index < current ? "✓" : index + 1}</span>
+              <button type="button" onClick={() => selectStep(step.status, index)} className={`progress-step ${index < selectedIndex ? "reached" : ""} ${index === selectedIndex ? "current" : ""} ${index !== current ? "draft" : ""} ${skipped ? "skipped" : ""}`} key={step.status}>
+                <span className="progress-dot">{index < selectedIndex ? "✓" : index + 1}</span>
                 <span>{skipped ? "Not needed" : step.label}</span>
-              </div>
+              </button>
             );
           })}
         </div>
       </div>
     </article>
   );
-}
-
-function JobAction({ job, update }: { job: Job; update: (id: string, status: JobStatus, courierRequired?: boolean) => void }) {
-  if (job.status === "opened") return <button className="action amber" onClick={() => update(job.id, "picking")}>Start picking</button>;
-  if (job.status === "picking") return <button className="action blue" onClick={() => update(job.id, "picked")}>Mark stock ready</button>;
-  if (job.status === "picked" && job.courierRequired === null) {
-    return <div className="decision"><strong>Does this job need a courier?</strong><button className="action red" onClick={() => update(job.id, "courier_needed", true)}>Yes, courier required</button><button className="action quiet" onClick={() => update(job.id, "picked", false)}>No courier</button></div>;
-  }
-  if (job.status === "picked" && job.courierRequired === false) return <button className="action green" onClick={() => update(job.id, "completed")}>Complete job</button>;
-  if (job.status === "courier_needed") return <button className="action red" onClick={() => update(job.id, "courier_booked", true)}>Mark courier booked</button>;
-  if (job.status === "courier_booked") return <button className="action green" onClick={() => update(job.id, "completed", true)}>Complete job</button>;
-  return <span className="complete-note">✓ Workflow complete</span>;
 }
 
 function Input({ label, value, placeholder, onChange }: { label: string; value: string; placeholder: string; onChange: (value: string) => void }) {

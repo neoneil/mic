@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createJob, listJobs, updateJob } from "@/lib/jobs";
 import { jobStatuses } from "@/lib/job-types";
+import { getMicUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -17,16 +18,29 @@ const createSchema = z.object({
   invoiceNumber: optionalText,
   notes: z.string().trim().max(2000).optional().nullable()
     .transform((value) => value || null),
+  deliveryAddress: optionalText,
+  postcode: optionalText,
+  lineItems: z.array(z.object({
+    description: z.string().trim().max(300),
+    chineseName: optionalText,
+    micCode: optionalText,
+    partNumber: optionalText,
+    price: optionalText,
+  })).max(30).default([]),
+  total: optionalText,
+  currency: optionalText,
 });
 
 const updateSchema = z.object({
   id: z.uuid(),
   status: z.enum(jobStatuses),
   courierRequired: z.boolean().nullable().optional(),
+  courierBookedDate: z.iso.date().nullable().optional(),
 });
 
 export async function GET(request: Request) {
   try {
+    if (!await getMicUser()) return NextResponse.json({ error: "Login required." }, { status: 401 });
     const date = new URL(request.url).searchParams.get("date") || undefined;
     if (date && !z.iso.date().safeParse(date).success) {
       return NextResponse.json({ error: "Invalid date." }, { status: 400 });
@@ -39,6 +53,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    if (!await getMicUser()) return NextResponse.json({ error: "Login required." }, { status: 401 });
     const parsed = createSchema.safeParse(await request.json());
     if (!parsed.success) {
       return NextResponse.json({ error: "Please check the job details." }, { status: 400 });
@@ -51,6 +66,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    if (!await getMicUser()) return NextResponse.json({ error: "Login required." }, { status: 401 });
     const parsed = updateSchema.safeParse(await request.json());
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid job update." }, { status: 400 });

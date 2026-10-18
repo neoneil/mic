@@ -19,6 +19,42 @@ type JobRow = {
   completed_at: string | null;
 };
 
+type StoredJobDetails = {
+  version: 1;
+  notes: string | null;
+  deliveryAddress: string | null;
+  postcode: string | null;
+  lineItems: Job["lineItems"];
+  total: string | null;
+  currency: string | null;
+  courierBookedDate: string | null;
+};
+
+const DETAILS_PREFIX = "MIC_JOB_V1:";
+
+function decodeDetails(value: string | null): StoredJobDetails {
+  if (value?.startsWith(DETAILS_PREFIX)) {
+    try {
+      return JSON.parse(value.slice(DETAILS_PREFIX.length)) as StoredJobDetails;
+    } catch {
+    }
+  }
+  return {
+    version: 1,
+    notes: value,
+    deliveryAddress: null,
+    postcode: null,
+    lineItems: [],
+    total: null,
+    currency: null,
+    courierBookedDate: null,
+  };
+}
+
+function encodeDetails(details: StoredJobDetails) {
+  return `${DETAILS_PREFIX}${JSON.stringify(details)}`;
+}
+
 function client() {
   const env = getServerEnv();
   return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
@@ -27,6 +63,7 @@ function client() {
 }
 
 function toJob(row: JobRow): Job {
+  const details = decodeDetails(row.notes);
   return {
     id: row.id,
     workDate: row.work_date,
@@ -35,7 +72,13 @@ function toJob(row: JobRow): Job {
     source: row.source,
     jobNumber: row.job_number,
     invoiceNumber: row.invoice_number,
-    notes: row.notes,
+    notes: details.notes,
+    deliveryAddress: details.deliveryAddress,
+    postcode: details.postcode,
+    lineItems: details.lineItems,
+    total: details.total,
+    currency: details.currency,
+    courierBookedDate: details.courierBookedDate,
     status: row.status,
     courierRequired: row.courier_required,
     createdAt: row.created_at,
@@ -58,6 +101,16 @@ export async function listJobs(date?: string) {
 }
 
 export async function createJob(input: JobInput) {
+  const details: StoredJobDetails = {
+    version: 1,
+    notes: input.notes,
+    deliveryAddress: input.deliveryAddress,
+    postcode: input.postcode,
+    lineItems: input.lineItems,
+    total: input.total,
+    currency: input.currency,
+    courierBookedDate: null,
+  };
   const { data, error } = await client()
     .from("jobs")
     .insert({
@@ -67,7 +120,7 @@ export async function createJob(input: JobInput) {
       source: input.source,
       job_number: input.jobNumber,
       invoice_number: input.invoiceNumber,
-      notes: input.notes,
+      notes: encodeDetails(details),
     })
     .select()
     .single();
@@ -78,7 +131,7 @@ export async function createJob(input: JobInput) {
 
 export async function updateJob(
   id: string,
-  input: { status: JobStatus; courierRequired?: boolean | null },
+  input: { status: JobStatus; courierRequired?: boolean | null; courierBookedDate?: string | null },
 ) {
   const update: Record<string, unknown> = {
     status: input.status,
@@ -87,6 +140,17 @@ export async function updateJob(
   };
   if (input.courierRequired !== undefined) {
     update.courier_required = input.courierRequired;
+  }
+  if (input.courierBookedDate !== undefined) {
+    const { data: existing, error: readError } = await client()
+      .from("jobs")
+      .select("notes")
+      .eq("id", id)
+      .single();
+    if (readError) throw new Error(`Supabase query failed: ${readError.message}`);
+    const details = decodeDetails(existing.notes as string | null);
+    details.courierBookedDate = input.courierBookedDate;
+    update.notes = encodeDetails(details);
   }
 
   const { data, error } = await client()

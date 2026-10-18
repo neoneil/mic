@@ -22,6 +22,10 @@ records in Supabase.
 2. Run the complete `supabase/schema.sql` in the Supabase SQL Editor. It is
    safe to run again after an earlier version; it creates missing tables and indexes.
 
+   The `part_cross_reference` table is the server-side MIC Code lookup index.
+   Import the Seven Brands workbook into this table after normalising each Part Number
+   to uppercase letters and digits only. Multiple MIC Codes for one Part Number are all returned.
+
 3. Fill in the empty values in `.env.local`:
 
    - `SUPABASE_URL`: project URL

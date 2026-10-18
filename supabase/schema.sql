@@ -40,3 +40,26 @@ create index if not exists jobs_work_date_idx on public.jobs (work_date desc);
 create index if not exists jobs_status_idx on public.jobs (status);
 
 alter table public.jobs enable row level security;
+
+create table if not exists public.part_cross_reference (
+  id bigint generated always as identity primary key,
+  brand text not null,
+  model text,
+  mic_code text not null,
+  part_number text not null,
+  part_number_normalized text not null,
+  chinese_name text,
+  description text,
+  source text not null default 'Seven Brands',
+  source_updated_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists part_cross_reference_part_number_idx
+  on public.part_cross_reference (part_number_normalized);
+
+alter table public.part_cross_reference enable row level security;
+
+alter table public.part_cross_reference
+  add column if not exists chinese_name text;
+

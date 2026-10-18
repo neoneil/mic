@@ -18,6 +18,12 @@ export type Job = {
   jobNumber: string | null;
   invoiceNumber: string | null;
   notes: string | null;
+  deliveryAddress: string | null;
+  postcode: string | null;
+  lineItems: { description: string; chineseName: string | null; micCode: string | null; partNumber: string | null; price: string | null }[];
+  total: string | null;
+  currency: string | null;
+  courierBookedDate: string | null;
   status: JobStatus;
   courierRequired: boolean | null;
   createdAt: string;
@@ -27,25 +33,36 @@ export type Job = {
 
 export type JobInput = Pick<
   Job,
-  "workDate" | "customerName" | "suburb" | "source" | "jobNumber" | "invoiceNumber" | "notes"
+  | "workDate"
+  | "customerName"
+  | "suburb"
+  | "source"
+  | "jobNumber"
+  | "invoiceNumber"
+  | "notes"
+  | "deliveryAddress"
+  | "postcode"
+  | "lineItems"
+  | "total"
+  | "currency"
 >;
 
 export const statusLabels: Record<JobStatus, string> = {
-  opened: "Order opened",
-  picking: "Picking stock",
-  picked: "Stock ready",
-  courier_needed: "Courier required",
+  opened: "Invoice received",
+  picking: "Label printed",
+  picked: "Parts picked",
+  courier_needed: "Ready for courier",
   courier_booked: "Courier booked",
-  completed: "Completed",
+  completed: "Collected",
 };
 
 export const progressSteps = [
-  { status: "opened", label: "Opened" },
-  { status: "picking", label: "Picking" },
-  { status: "picked", label: "Ready" },
-  { status: "courier_needed", label: "Courier" },
+  { status: "opened", label: "Invoice" },
+  { status: "picking", label: "Label" },
+  { status: "picked", label: "Picking" },
+  { status: "courier_needed", label: "Ready" },
   { status: "courier_booked", label: "Booked" },
-  { status: "completed", label: "Done" },
+  { status: "completed", label: "Collected" },
 ] satisfies { status: JobStatus; label: string }[];
 
 export function statusIndex(status: JobStatus, courierRequired: boolean | null) {

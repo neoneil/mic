@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { extractInvoiceFields } from "@/lib/invoice-parser";
 import { extractPdfText } from "@/lib/pdf";
+import { createJob } from "@/lib/jobs";
+import { addMicCodes } from "@/lib/mic-codes";
 import { saveInvoice } from "@/lib/storage";
+import { getMicUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -9,6 +12,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 export async function POST(request: Request) {
   try {
+    if (!await getMicUser()) return NextResponse.json({ error: "Login required." }, { status: 401 });
     const form = await request.formData();
     const file = form.get("file");
 
@@ -40,11 +44,28 @@ export async function POST(request: Request) {
     }
 
     const id = crypto.randomUUID();
-    const fields = extractInvoiceFields(rawText);
+    const extracted = extractInvoiceFields(rawText);
+    const fields = { ...extracted, lineItems: await addMicCodes(extracted.lineItems) };
     await saveInvoice({ id, fileName: file.name, bytes, text: rawText, fields });
+    const suburb = [fields.suburb, fields.state, fields.postcode].filter(Boolean).join(" ");
+    const job = await createJob({
+      workDate: new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Sydney" }).format(new Date()),
+      customerName: fields.contactName,
+      suburb: suburb || null,
+      source: "Xero PDF",
+      jobNumber: fields.reference,
+      invoiceNumber: fields.invoiceNumber,
+      notes: null,
+      deliveryAddress: fields.addressLines.join(", ") || null,
+      postcode: fields.postcode,
+      lineItems: fields.lineItems,
+      total: fields.total,
+      currency: fields.currency,
+    });
 
     return NextResponse.json({
       invoice: { id, fileName: file.name, rawText, ...fields },
+      job,
     }, { status: 201 });
   } catch (error) {
     console.error("Invoice import failed", error);

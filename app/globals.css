@@ -54,6 +54,21 @@ pre { max-height: 460px; margin: 0; padding: 18px; overflow: auto; white-space: 
 }
 
 .app-shell { padding-top: 54px; }
+.app-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 34px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.app-header > span { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.auth-menu { position: relative; z-index: 20; }
+.auth-menu summary { padding: 9px 15px; color: white; background: var(--accent); border-radius: 9px; font-size: 13px; font-weight: 800; list-style: none; cursor: pointer; }
+.auth-menu summary::-webkit-details-marker { display: none; }
+.auth-menu form { position: absolute; top: calc(100% + 10px); right: 0; display: grid; gap: 12px; width: min(340px, calc(100vw - 32px)); padding: 20px; background: var(--card); border: 1px solid var(--line); border-radius: 13px; box-shadow: 0 18px 50px rgba(28, 43, 34, .18); }
+.auth-menu label { display: grid; gap: 5px; color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.auth-menu input { width: 100%; padding: 11px 12px; border: 1px solid #cbd2cc; border-radius: 8px; font: inherit; }
+.auth-menu button, .signed-in button { justify-self: stretch; padding: 10px 14px; }
+.auth-error { color: var(--danger); font-size: 12px; }
+.signed-in { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; }
+.signed-in button { color: #4f5b53; background: #e7ebe6; }
+.login-required { display: grid; gap: 8px; padding: 28px; background: var(--card); border: 1px solid var(--line); border-radius: 15px; box-shadow: 0 12px 35px rgba(28,43,34,.07); }
+.login-required strong { font-size: 20px; }
+.login-required span { color: var(--muted); }
 .workspace { display: grid; gap: 22px; }
 .toolbar { display: flex; align-items: end; justify-content: space-between; gap: 20px; }
 .toolbar h2 { margin: 3px 0 0; font-size: 30px; letter-spacing: -.025em; }
@@ -138,4 +153,78 @@ button.primary, button.action, button.quiet { justify-self: auto; }
   .job-main { padding: 18px; }
   .progress-panel { padding: 18px 10px; overflow-x: auto; }
   .progress-track { min-width: 430px; }
+}
+
+.invoice-intake { display: grid; gap: 14px; margin-bottom: 42px; }
+.intake-heading h2 { margin: 4px 0 0; font-size: 26px; letter-spacing: -.025em; }
+.invoice-intake .card { padding: 20px; }
+.invoice-intake .upload { grid-template-columns: minmax(280px, 1fr) auto; align-items: center; gap: 14px; }
+.invoice-intake .dropzone { min-height: 88px; justify-items: start; text-align: left; }
+.invoice-intake .error { grid-column: 1 / -1; }
+.result { padding-top: 24px; border-top: 1px solid var(--line); }
+.invoice-summary { grid-template-columns: repeat(5, minmax(120px, 1fr)); }
+.invoice-address { display: grid; gap: 4px; margin-top: 12px; padding: 15px; background: #f4f6f2; border-radius: 10px; }
+.invoice-address span { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.invoice-address small { color: var(--muted); }
+.table-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.table-heading h3 { margin: 0; }
+.table-heading span { color: var(--muted); font-size: 12px; font-weight: 700; }
+.invoice-item { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(120px, .75fr) minmax(100px, .55fr) minmax(140px, .75fr) 100px; align-items: center; gap: 12px; min-height: 48px; padding: 8px 12px; border-top: 1px solid #e6e9e3; }
+.invoice-item code, .job-part code { color: #2e5f48; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-weight: 800; }
+.invoice-item-header, .job-part-header { min-height: auto; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.mic-pending { color: #9a6922 !important; }
+.name-pending { color: #9a6922; }
+.item-price { text-align: right; font-weight: 800; }
+.import-success { margin: 0; padding: 12px 14px; color: #236846; background: #e3f3e9; border-radius: 9px; font-size: 13px; font-weight: 800; }
+
+.workspace { margin-top: 10px; }
+.job-list { gap: 10px; }
+.job-card { grid-template-columns: 1fr; min-height: 142px; border-left-width: 4px; border-radius: 12px; }
+.job-main { display: grid; grid-template-columns: 250px minmax(280px, 1fr) auto; align-items: center; gap: 22px; padding: 16px 18px; }
+.job-title-row { align-items: flex-start; }
+.job-title-row h3 { margin: 5px 0 3px; font-size: 17px; }
+.job-title-row p { font-size: 12px; line-height: 1.45; }
+.status-pill { display: none; }
+.job-parts { display: grid; gap: 5px; min-width: 0; padding-left: 18px; border-left: 1px solid #e4e8e2; }
+.job-part { display: grid; grid-template-columns: minmax(105px, 1fr) minmax(100px, .8fr) minmax(85px, .65fr) minmax(95px, .8fr) auto; align-items: center; gap: 10px; min-width: 0; font-size: 12px; }
+.job-part span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.job-part strong { font-size: 11px; white-space: nowrap; }
+.no-parts { color: var(--danger); font-size: 12px; font-weight: 800; }
+.job-card-footer { display: grid; justify-items: end; gap: 8px; min-width: 145px; }
+.job-total { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+.job-total strong { margin-left: 5px; color: var(--ink); font-size: 14px; }
+.booked-date { color: #285f7e; font-size: 11px; }
+.progress-panel { padding: 14px 18px 16px; border-top: 1px solid var(--line); border-left: 0; }
+.progress-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.progress-heading > div { display: grid; gap: 3px; margin-right: auto; }
+.progress-heading small { color: var(--muted); font-size: 11px; }
+.progress-heading input { padding: 7px 9px; border: 1px solid #cdd4cd; border-radius: 7px; font: inherit; font-size: 12px; }
+.progress-title { margin-bottom: 0; }
+.confirm-progress { padding: 8px 16px; background: #286c4d; font-size: 12px; }
+.cancel-progress { padding: 8px 12px; color: #566158; background: #e5e9e4; font-size: 12px; }
+.progress-track::before { left: 7%; right: 7%; top: 12px; }
+.progress-step { gap: 5px; padding: 0 4px; color: #919a93; background: transparent; border-radius: 8px; box-shadow: none; }
+.progress-step:hover { color: #286c4d; background: rgba(40, 108, 77, .06); }
+.progress-step:not(:last-child)::after { content: "›"; position: absolute; top: 3px; right: -5px; color: #aeb7af; font-size: 18px; font-weight: 900; }
+.progress-dot { width: 26px; height: 26px; }
+.progress-step.current { color: #7b5718; }
+.progress-step.current .progress-dot { color: #5f430f; background: #ffd879; border-color: #d9a838; box-shadow: 0 0 0 4px rgba(217,168,56,.15); }
+.status-courier_needed .progress-step.current { color: #8f302a; }
+.status-courier_needed .progress-step.current .progress-dot { color: white; background: #bd4a41; border-color: #bd4a41; box-shadow: 0 0 0 4px rgba(189,74,65,.12); }
+.action { padding: 8px 11px; font-size: 12px; white-space: nowrap; }
+.booking-action { display: flex; align-items: center; gap: 6px; }
+.booking-action input { width: 128px; padding: 7px 8px; border: 1px solid #d0d6d0; border-radius: 7px; font: inherit; font-size: 11px; }
+
+@media (max-width: 1120px) {
+  .job-card { grid-template-columns: 1fr; }
+  .job-main { grid-template-columns: 220px minmax(260px, 1fr) auto; }
+}
+
+@media (max-width: 760px) {
+  .invoice-intake .upload, .invoice-summary, .invoice-item, .job-main { grid-template-columns: 1fr; }
+  .invoice-intake .upload button { width: 100%; }
+  .invoice-item { gap: 5px; }
+  .item-price { text-align: left; }
+  .job-parts { padding: 12px 0; border-top: 1px solid #e4e8e2; border-left: 0; border-bottom: 1px solid #e4e8e2; }
+  .job-card-footer { justify-items: start; }
 }
